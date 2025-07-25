@@ -1,1 +1,0 @@
-# GK-CK-MTKPM
