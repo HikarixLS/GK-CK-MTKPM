@@ -44,10 +44,8 @@ public class Main {
             System.out.println("5. Tim kiem san pham con 1 tuan la het han");
             System.out.println("6. Tinh tong so luong cho tung loai hang hoa");
             System.out.println("7. Tinh trung binh so luong ton cua hang dien may");
-            System.out.println("8. Tim kiem hang hoa theo ma/ten");
-            System.out.println("9. Thong ke tong quan");
-            System.out.println("10. Thoat");
-            System.out.print("Chon chuc nang (1-10): ");
+            System.out.println("8. Thoat");
+            System.out.print("Chon chuc nang (1-8): ");
             
             try {
                 int choice = Integer.parseInt(scanner.nextLine());
@@ -75,16 +73,10 @@ public class Main {
                         tinhTrungBinhSoLuongDienMay();
                         break;
                     case 8:
-                        timKiemHangHoa();
-                        break;
-                    case 9:
-                        thongKeTongQuan();
-                        break;
-                    case 10:
                         System.out.println("Cam on ban da su dung chuong trinh!");
                         return;
                     default:
-                        System.out.println("Lua chon khong hop le! Vui long chon tu 1-10.");
+                        System.out.println("Lua chon khong hop le! Vui long chon tu 1-8.");
                 }
             } catch (NumberFormatException e) {
                 System.out.println("Vui long nhap so tu 1-8!");
@@ -211,10 +203,6 @@ public class Main {
     
     private static void themSanhSu() {
         System.out.println("Chuc nang them sanh su dang phat trien...");
-    }
-    
-    private static void timKiemHangHoa() {
-        System.out.println("Chuc nang tim kiem dang phat trien...");
     }
     
     private static void timSanPhamSapHetHan() {
@@ -358,35 +346,6 @@ public class Main {
     private static void tinhTrungBinhSoLuongDienMay() {
         System.out.println("\n=== THONG KE HANG DIEN MAY ===");
         hangHoaDAO.tinhTrungBinhSoLuongDienMay();
-    }
-    
-    // 9. Thong ke tong quan
-    private static void thongKeTongQuan() {
-        System.out.println("\n=== THONG KE TONG QUAN ===");
-        hangHoaDAO.tinhTongSoLuongTheoLoai();
-        System.out.println();
-        hangHoaDAO.tinhTrungBinhSoLuongDienMay();
-        
-        // Thong ke them
-        List<HangHoa> danhSach = hangHoaDAO.layDanhSachHangHoa();
-        if (!danhSach.isEmpty()) {
-            double tongGiaTri = danhSach.stream()
-                .mapToDouble(hh -> hh.getSoLuongTon() * hh.getDonGia())
-                .sum();
-            
-            System.out.println("\n=== THONG TIN TONG HOP ===");
-            System.out.println("Tong so mat hang trong kho: " + danhSach.size());
-            System.out.printf("Tong gia tri kho hang: %,.0f VND%n", tongGiaTri);
-            
-            // Tim san pham co gia tri cao nhat
-            HangHoa maxValue = danhSach.stream()
-                .max((h1, h2) -> Double.compare(h1.getDonGia(), h2.getDonGia()))
-                .orElse(null);
-            if (maxValue != null) {
-                System.out.printf("San pham co gia tri cao nhat: %s - %,.0f VND%n", 
-                    maxValue.getTenHang(), maxValue.getDonGia());
-            }
-        }
     }
     
     // Helper method de hien thi thong tin hang hoa

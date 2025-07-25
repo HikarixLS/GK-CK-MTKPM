@@ -33,21 +33,71 @@ goto MAIN_MENU
 :GUI_MODE
 echo.
 echo    🖼️ Khởi động GUI Mode...
-call run_gui_optimized.bat
+echo    🏪 Chạy giao diện GUI cho Quản Lý Kho
+echo    =====================================
+echo.
+echo    Kiểm tra XAMPP và MySQL...
+echo.
+
+java -cp "bin;lib\mysql-connector-java.jar" KhoGUI
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo    ❌ Lỗi chạy GUI. Thử console mode...
+    echo.
+    java -cp "bin;lib\mysql-connector-java.jar" Main
+    pause
+) else (
+    echo.
+    echo    ✅ GUI đã đóng thành công.
+)
 timeout /t 3 >nul
 goto MAIN_MENU
 
 :CONSOLE_MODE
 echo.
 echo    🖥️ Khởi động Console Mode...
-call run_console.bat
+echo    🖥️ Chạy Console Mode cho Quản Lý Kho
+echo    ====================================
+echo.
+echo    Kiểm tra XAMPP và MySQL...
+echo.
+
+java -cp "bin;lib\mysql-connector-java.jar" Main
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo    ❌ Lỗi chạy console mode.
+    echo    💡 Hãy kiểm tra XAMPP đã bật MySQL chưa.
+    pause
+) else (
+    echo.
+    echo    ✅ Console mode đã đóng thành công.
+)
 timeout /t 3 >nul
 goto MAIN_MENU
 
 :COMPILE
 echo.
 echo    🔧 Đang biên dịch source code...
-call scripts\compile.bat
+echo    ==============================
+echo.
+
+REM Tạo thư mục bin nếu chưa có
+if not exist "bin" mkdir bin
+
+REM Biên dịch tất cả file Java
+echo    📝 Compiling Java files...
+javac -d bin -cp "lib\mysql-connector-java.jar" src\*.java
+
+if %ERRORLEVEL% EQU 0 (
+    echo    ✅ Biên dịch thành công!
+) else (
+    echo    ❌ Có lỗi trong quá trình biên dịch!
+    pause
+    goto MAIN_MENU
+)
+
 echo    ✅ Biên dịch hoàn tất!
 timeout /t 3 >nul
 goto MAIN_MENU

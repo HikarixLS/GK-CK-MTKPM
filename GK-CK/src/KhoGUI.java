@@ -12,6 +12,15 @@ public class KhoGUI extends JFrame {
     private JComboBox<String> cboLoai;
     private JTextArea txtKQ;
     
+    // Trường cho Thực phẩm
+    private JTextField txtNgaySX, txtNgayHH, txtNhaCungCap;
+    
+    // Trường cho Điện máy  
+    private JTextField txtBaoHanh, txtCongSuat;
+    
+    // Trường cho Sành sứ
+    private JTextField txtNhaSanXuat, txtNgayNhapKho;
+    
     public KhoGUI() {
         try {
             dao = new HangHoaDAO();
@@ -38,6 +47,18 @@ public class KhoGUI extends JFrame {
         txtGia = new JTextField(10);
         cboLoai = new JComboBox<>(new String[]{"ThucPham", "DienMay", "SanhSu"});
         
+        // Khởi tạo các trường chi tiết
+        txtNgaySX = new JTextField(10);
+        txtNgayHH = new JTextField(10);
+        txtNhaCungCap = new JTextField(15);
+        txtBaoHanh = new JTextField(8);
+        txtCongSuat = new JTextField(10);
+        txtNhaSanXuat = new JTextField(15);
+        txtNgayNhapKho = new JTextField(10);
+        
+        // Thêm listener để hiện/ẩn trường theo loại
+        cboLoai.addActionListener(e -> updateFieldsVisibility());
+        
         // Table
         String[] cols = {"Mã", "Tên", "Loại", "SL", "Giá", "VAT%"};
         model = new DefaultTableModel(cols, 0);
@@ -61,11 +82,11 @@ public class KhoGUI extends JFrame {
         
         // Top - Buttons
         JPanel topPanel = new JPanel(new FlowLayout());
-        topPanel.add(createBtn("📋 Xem", this::xemDS));
+        topPanel.add(createBtn("📋 Xem tất cả", this::xemDS));
         topPanel.add(createBtn("➕ Thêm", this::them));
-        topPanel.add(createBtn("🔍 Tìm", this::tim));
         topPanel.add(createBtn("⏰ Hết hạn", this::hetHan));
-        topPanel.add(createBtn("📊 Thống kê", this::thongKe));
+        topPanel.add(createBtn("📊 Tổng theo loại", this::tongTheoLoai));
+        topPanel.add(createBtn("📈 TB điện máy", this::trungBinhDienMay));
         topPanel.add(createBtn("❌ Xóa", this::xoa));
         topPanel.add(createBtn("✏️ Sửa", this::sua));
         topPanel.add(createBtn("🚪 Thoát", this::thoat));
@@ -81,6 +102,7 @@ public class KhoGUI extends JFrame {
         gbc.insets = new Insets(3, 3, 3, 3);
         gbc.anchor = GridBagConstraints.WEST;
         
+        // Thông tin chung
         gbc.gridx = 0; gbc.gridy = 0; leftPanel.add(new JLabel("Mã:"), gbc);
         gbc.gridx = 1; leftPanel.add(txtMa, gbc);
         gbc.gridx = 0; gbc.gridy = 1; leftPanel.add(new JLabel("Tên:"), gbc);
@@ -91,6 +113,31 @@ public class KhoGUI extends JFrame {
         gbc.gridx = 1; leftPanel.add(txtSL, gbc);
         gbc.gridx = 0; gbc.gridy = 4; leftPanel.add(new JLabel("Giá:"), gbc);
         gbc.gridx = 1; leftPanel.add(txtGia, gbc);
+        
+        // Separator
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
+        leftPanel.add(new JSeparator(), gbc);
+        gbc.gridwidth = 1;
+        
+        // Trường cho Thực phẩm
+        gbc.gridx = 0; gbc.gridy = 6; leftPanel.add(new JLabel("🍎 Ngày SX (dd/MM/yyyy):"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtNgaySX, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; leftPanel.add(new JLabel("🍎 Ngày HH (dd/MM/yyyy):"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtNgayHH, gbc);
+        gbc.gridx = 0; gbc.gridy = 8; leftPanel.add(new JLabel("🍎 Nhà cung cấp:"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtNhaCungCap, gbc);
+        
+        // Trường cho Điện máy
+        gbc.gridx = 0; gbc.gridy = 9; leftPanel.add(new JLabel("⚡ Bảo hành (tháng):"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtBaoHanh, gbc);
+        gbc.gridx = 0; gbc.gridy = 10; leftPanel.add(new JLabel("⚡ Công suất (W):"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtCongSuat, gbc);
+        
+        // Trường cho Sành sứ
+        gbc.gridx = 0; gbc.gridy = 11; leftPanel.add(new JLabel("🏺 Nhà sản xuất:"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtNhaSanXuat, gbc);
+        gbc.gridx = 0; gbc.gridy = 12; leftPanel.add(new JLabel("🏺 Ngày nhập (dd/MM/yyyy):"), gbc);
+        gbc.gridx = 1; leftPanel.add(txtNgayNhapKho, gbc);
         
         // Right - Table
         JPanel rightPanel = new JPanel(new BorderLayout());
@@ -107,6 +154,79 @@ public class KhoGUI extends JFrame {
         bottomPanel.setBorder(BorderFactory.createTitledBorder("💬 Kết Quả"));
         bottomPanel.add(new JScrollPane(txtKQ), BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
+        
+        // Khởi tạo hiển thị ban đầu
+        updateFieldsVisibility();
+    }
+    
+    private void updateFieldsVisibility() {
+        String loai = (String) cboLoai.getSelectedItem();
+        
+        // Ẩn tất cả trước
+        setVisibleTP(false);
+        setVisibleDM(false);
+        setVisibleSS(false);
+        
+        // Hiện theo loại
+        if ("ThucPham".equals(loai)) {
+            setVisibleTP(true);
+        } else if ("DienMay".equals(loai)) {
+            setVisibleDM(true);
+        } else if ("SanhSu".equals(loai)) {
+            setVisibleSS(true);
+        }
+        
+        revalidate();
+        repaint();
+    }
+    
+    private void setVisibleTP(boolean visible) {
+        // Tìm và set visible cho label và field của thực phẩm
+        Container parent = txtNgaySX.getParent();
+        Component[] comps = parent.getComponents();
+        for (Component comp : comps) {
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (lbl.getText().contains("🍎")) {
+                    lbl.setVisible(visible);
+                }
+            }
+        }
+        txtNgaySX.setVisible(visible);
+        txtNgayHH.setVisible(visible);
+        txtNhaCungCap.setVisible(visible);
+    }
+    
+    private void setVisibleDM(boolean visible) {
+        // Tìm và set visible cho label và field của điện máy
+        Container parent = txtBaoHanh.getParent();
+        Component[] comps = parent.getComponents();
+        for (Component comp : comps) {
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (lbl.getText().contains("⚡")) {
+                    lbl.setVisible(visible);
+                }
+            }
+        }
+        txtBaoHanh.setVisible(visible);
+        txtCongSuat.setVisible(visible);
+    }
+    
+    private void setVisibleSS(boolean visible) {
+        // Tìm và set visible cho label và field của sành sứ
+        Container parent = txtNhaSanXuat.getParent();
+        Component[] comps = parent.getComponents();
+        for (Component comp : comps) {
+            if (comp instanceof JLabel) {
+                JLabel lbl = (JLabel) comp;
+                if (lbl.getText().contains("🏺")) {
+                    lbl.setVisible(visible);
+                }
+            }
+        }
+        txtNhaSanXuat.setVisible(visible);
+        txtNgayNhapKho.setVisible(visible);
     }
     
     private JButton createBtn(String text, Runnable action) {
@@ -115,8 +235,11 @@ public class KhoGUI extends JFrame {
         return btn;
     }
     
-    // 8 Chức năng chính
-    private void xemDS() { loadData(); }
+    // Các chức năng chính
+    private void xemDS() { 
+        loadData(); 
+        msg("📋 Đã load danh sách tất cả hàng hóa trong kho");
+    }
     
     private void them() {
         try {
@@ -133,16 +256,55 @@ public class KhoGUI extends JFrame {
             
             boolean ok = false;
             if ("ThucPham".equals(loai)) {
-                LocalDate ngaySX = LocalDate.now().minusDays(30);
-                LocalDate ngayHH = LocalDate.now().plusDays(30);
-                ThucPham tp = new ThucPham(ma, ten, sl, gia, ngaySX, ngayHH, "NCC1");
+                String ngaySXStr = txtNgaySX.getText().trim();
+                String ngayHHStr = txtNgayHH.getText().trim();
+                String nhaCungCap = txtNhaCungCap.getText().trim();
+                
+                if (ngaySXStr.isEmpty() || ngayHHStr.isEmpty() || nhaCungCap.isEmpty()) {
+                    msg("❌ Nhập đầy đủ thông tin thực phẩm!");
+                    return;
+                }
+                
+                LocalDate ngaySX = parseDate(ngaySXStr);
+                LocalDate ngayHH = parseDate(ngayHHStr);
+                if (ngaySX == null || ngayHH == null) {
+                    msg("❌ Ngày không đúng định dạng dd/MM/yyyy!");
+                    return;
+                }
+                
+                ThucPham tp = new ThucPham(ma, ten, sl, gia, ngaySX, ngayHH, nhaCungCap);
                 ok = dao.themThucPham(tp);
+                
             } else if ("DienMay".equals(loai)) {
-                DienMay dm = new DienMay(ma, ten, sl, gia, 12, 100.0);
+                String baoHanhStr = txtBaoHanh.getText().trim();
+                String congSuatStr = txtCongSuat.getText().trim();
+                
+                if (baoHanhStr.isEmpty() || congSuatStr.isEmpty()) {
+                    msg("❌ Nhập đầy đủ thông tin điện máy!");
+                    return;
+                }
+                
+                int baoHanh = Integer.parseInt(baoHanhStr);
+                double congSuat = Double.parseDouble(congSuatStr);
+                DienMay dm = new DienMay(ma, ten, sl, gia, baoHanh, congSuat);
                 ok = dao.themDienMay(dm);
+                
             } else {
-                LocalDate ngayNhap = LocalDate.now();
-                SanhSu ss = new SanhSu(ma, ten, sl, gia, "NSX1", ngayNhap);
+                String nhaSanXuat = txtNhaSanXuat.getText().trim();
+                String ngayNhapStr = txtNgayNhapKho.getText().trim();
+                
+                if (nhaSanXuat.isEmpty() || ngayNhapStr.isEmpty()) {
+                    msg("❌ Nhập đầy đủ thông tin sành sứ!");
+                    return;
+                }
+                
+                LocalDate ngayNhap = parseDate(ngayNhapStr);
+                if (ngayNhap == null) {
+                    msg("❌ Ngày không đúng định dạng dd/MM/yyyy!");
+                    return;
+                }
+                
+                SanhSu ss = new SanhSu(ma, ten, sl, gia, nhaSanXuat, ngayNhap);
                 ok = dao.themSanhSu(ss);
             }
             
@@ -158,69 +320,136 @@ public class KhoGUI extends JFrame {
         }
     }
     
-    private void tim() {
-        String keyword = JOptionPane.showInputDialog("🔍 Nhập từ khóa:");
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            try {
-                List<HangHoa> list = dao.layDanhSachHangHoa();
-                model.setRowCount(0);
-                int count = 0;
-                for (HangHoa hh : list) {
-                    if (hh.getMaHang().toLowerCase().contains(keyword.toLowerCase()) ||
-                        hh.getTenHang().toLowerCase().contains(keyword.toLowerCase())) {
-                        addRow(hh);
-                        count++;
-                    }
-                }
-                msg("🔍 Tìm thấy " + count + " kết quả cho: " + keyword);
-            } catch (Exception e) {
-                msg("❌ Lỗi tìm kiếm: " + e.getMessage());
-            }
-        }
-    }
-    
     private void hetHan() {
         try {
-            List<ThucPham> list = dao.timSanPhamSapHetHan();
+            List<ThucPham> list = dao.timSanPhamSapHetHanTrongTuan();
             model.setRowCount(0);
             if (list.isEmpty()) {
-                msg("✅ Không có sản phẩm sắp hết hạn");
+                msg("✅ Không có sản phẩm sắp hết hạn trong 1 tuần");
             } else {
                 for (ThucPham tp : list) {
                     addRow(tp);
                 }
-                msg("⚠️ Có " + list.size() + " sản phẩm sắp hết hạn!");
+                msg("⚠️ Có " + list.size() + " sản phẩm sắp hết hạn trong 1 tuần!");
             }
         } catch (Exception e) {
             msg("❌ Lỗi: " + e.getMessage());
         }
     }
     
-    private void thongKe() {
+    private void tongTheoLoai() {
         try {
-            List<HangHoa> list = dao.layDanhSachHangHoa();
-            int tp = 0, dm = 0, ss = 0;
-            double tongGT = 0;
+            // Sử dụng cửa sổ popup để hiển thị thống kê
+            StringBuilder result = new StringBuilder();
+            result.append("📊 TỔNG SỐ LƯỢNG THEO TỪNG LOẠI HÀNG HÓA\n");
+            result.append("═══════════════════════════════════════\n\n");
             
-            for (HangHoa hh : list) {
-                tongGT += hh.getSoLuongTon() * hh.getDonGia();
-                if (hh instanceof ThucPham) tp++;
-                else if (hh instanceof DienMay) dm++;
-                else ss++;
+            List<HangHoa> danhSach = dao.layDanhSachHangHoa();
+            
+            // Đếm theo loại
+            int tongThucPham = 0, slThucPham = 0;
+            int tongDienMay = 0, slDienMay = 0;  
+            int tongSanhSu = 0, slSanhSu = 0;
+            
+            for (HangHoa hh : danhSach) {
+                if (hh instanceof ThucPham) {
+                    tongThucPham += hh.getSoLuongTon();
+                    slThucPham++;
+                } else if (hh instanceof DienMay) {
+                    tongDienMay += hh.getSoLuongTon();
+                    slDienMay++;
+                } else if (hh instanceof SanhSu) {
+                    tongSanhSu += hh.getSoLuongTon();
+                    slSanhSu++;
+                }
             }
             
-            String thongKe = String.format(
-                "📊 THỐNG KÊ KHO\n" +
-                "🍎 Thực phẩm: %d\n" +
-                "⚡ Điện máy: %d\n" +
-                "🏺 Sành sứ: %d\n" +
-                "💰 Tổng giá trị: %,.0f VND\n" +
-                "📦 Tổng cộng: %d mặt hàng",
-                tp, dm, ss, tongGT, list.size()
-            );
-            msg(thongKe);
+            result.append(String.format("🍎 THỰC PHẨM:\n"));
+            result.append(String.format("   - Số mặt hàng: %d\n", slThucPham));
+            result.append(String.format("   - Tổng số lượng tồn: %d\n\n", tongThucPham));
+            
+            result.append(String.format("⚡ ĐIỆN MÁY:\n"));
+            result.append(String.format("   - Số mặt hàng: %d\n", slDienMay));
+            result.append(String.format("   - Tổng số lượng tồn: %d\n\n", tongDienMay));
+            
+            result.append(String.format("🏺 SÀNH SỨ:\n"));
+            result.append(String.format("   - Số mặt hàng: %d\n", slSanhSu));
+            result.append(String.format("   - Tổng số lượng tồn: %d\n\n", tongSanhSu));
+            
+            result.append("═══════════════════════════════════════\n");
+            result.append(String.format("📦 TỔNG CỘNG: %d mặt hàng, %d sản phẩm", 
+                danhSach.size(), tongThucPham + tongDienMay + tongSanhSu));
+            
+            // Hiển thị trong dialog
+            JTextArea textArea = new JTextArea(result.toString());
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(500, 400));
+            
+            JOptionPane.showMessageDialog(this, scrollPane, 
+                "📊 Thống kê số lượng theo loại", JOptionPane.INFORMATION_MESSAGE);
+            
+            msg("📊 Đã hiển thị thống kê số lượng theo loại");
+            
         } catch (Exception e) {
             msg("❌ Lỗi thống kê: " + e.getMessage());
+        }
+    }
+    
+    private void trungBinhDienMay() {
+        try {
+            List<HangHoa> danhSach = dao.layDanhSachHangHoa();
+            
+            // Lọc ra điện máy
+            int tongSoLuong = 0;
+            int soDienMay = 0;
+            
+            for (HangHoa hh : danhSach) {
+                if (hh instanceof DienMay) {
+                    tongSoLuong += hh.getSoLuongTon();
+                    soDienMay++;
+                }
+            }
+            
+            StringBuilder result = new StringBuilder();
+            result.append("📈 TRUNG BÌNH SỐ LƯỢNG TỒN - HÀNG ĐIỆN MÁY\n");
+            result.append("═══════════════════════════════════════════\n\n");
+            
+            if (soDienMay == 0) {
+                result.append("❌ Không có hàng điện máy nào trong kho!");
+            } else {
+                double trungBinh = (double) tongSoLuong / soDienMay;
+                result.append(String.format("⚡ Số mặt hàng điện máy: %d\n", soDienMay));
+                result.append(String.format("📦 Tổng số lượng tồn: %d\n", tongSoLuong));
+                result.append(String.format("📊 Trung bình số lượng tồn: %.2f\n\n", trungBinh));
+                
+                // Chi tiết từng sản phẩm
+                result.append("📋 CHI TIẾT TỪNG SẢN PHẨM:\n");
+                result.append("─────────────────────────────────────────\n");
+                for (HangHoa hh : danhSach) {
+                    if (hh instanceof DienMay) {
+                        DienMay dm = (DienMay) hh;
+                        result.append(String.format("• %s (%s): %d sản phẩm\n", 
+                            dm.getTenHang(), dm.getMaHang(), dm.getSoLuongTon()));
+                    }
+                }
+            }
+            
+            // Hiển thị trong dialog
+            JTextArea textArea = new JTextArea(result.toString());
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+            scrollPane.setPreferredSize(new Dimension(500, 350));
+            
+            JOptionPane.showMessageDialog(this, scrollPane, 
+                "📈 Trung bình số lượng tồn - Điện máy", JOptionPane.INFORMATION_MESSAGE);
+            
+            msg("📈 Đã tính trung bình số lượng tồn điện máy");
+            
+        } catch (Exception e) {
+            msg("❌ Lỗi tính trung bình: " + e.getMessage());
         }
     }
     
@@ -325,6 +554,30 @@ public class KhoGUI extends JFrame {
         txtSL.setText("");
         txtGia.setText("");
         cboLoai.setSelectedIndex(0);
+        
+        // Clear các trường chi tiết
+        txtNgaySX.setText("");
+        txtNgayHH.setText("");
+        txtNhaCungCap.setText("");
+        txtBaoHanh.setText("");
+        txtCongSuat.setText("");
+        txtNhaSanXuat.setText("");
+        txtNgayNhapKho.setText("");
+        
+        updateFieldsVisibility();
+    }
+    
+    private LocalDate parseDate(String dateStr) {
+        try {
+            String[] parts = dateStr.split("/");
+            if (parts.length != 3) return null;
+            int day = Integer.parseInt(parts[0]);
+            int month = Integer.parseInt(parts[1]);
+            int year = Integer.parseInt(parts[2]);
+            return LocalDate.of(year, month, day);
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     public static void main(String[] args) {
