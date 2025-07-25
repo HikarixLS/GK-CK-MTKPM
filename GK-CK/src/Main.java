@@ -125,11 +125,6 @@ public class Main {
         System.out.println("\nTong so mat hang: " + danhSach.size());
     }
     
-    private static void xemDanhSachHangHoa() {
-        // Redirect to new method
-        inDanhSachTatCaHangHoa();
-    }
-    
     private static void themHangHoaMoi() {
         System.out.println("\n=== THEM HANG HOA MOI ===");
         System.out.println("1. Them Thuc Pham");
@@ -205,20 +200,9 @@ public class Main {
         System.out.println("Chuc nang them sanh su dang phat trien...");
     }
     
-    private static void timSanPhamSapHetHan() {
-        System.out.println("Chuc nang tim san pham sap het han dang phat trien...");
-    }
-    
-    private static void thongKeTheoLoai() {
-        System.out.println("Chuc nang thong ke dang phat trien...");
-    }
-    
+        
     private static void xoaHangHoa() {
         System.out.println("Chuc nang xoa hang hoa dang phat trien...");
-    }
-    
-    private static void capNhatHangHoa() {
-        System.out.println("Chuc nang cap nhat hang hoa dang phat trien...");
     }
     
     // 3. Sua hang hoa - Chi tiet full
