@@ -1,0 +1,209 @@
+@startuml Class Diagram - Warehouse Management System
+
+!theme plain
+skinparam backgroundColor white
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam roundcorner 10
+
+title 🏪 Hệ thống Quản lý Kho Hàng hóa - Sơ đồ lớp
+
+package "Presentation Layer" {
+    class Main {
+        -hangHoaDAO : HangHoaDAO
+        -scanner : Scanner
+        -formatter : DateTimeFormatter
+        +main(args : String[]) : void
+        -showMainMenu() : void
+        -addProduct() : void
+        -viewAllProducts() : void
+        -updateProduct() : void
+        -deleteProduct() : void
+        -findExpiringProducts() : void
+        -calculateStatistics() : void
+    }
+    
+    class KhoGUI {
+        -dao : HangHoaDAO
+        -table : JTable
+        -model : DefaultTableModel
+        -txtMa, txtTen, txtSL, txtGia : JTextField
+        -cboLoai : JComboBox<String>
+        -txtKQ : JTextArea
+        --Thực phẩm fields--
+        -txtNgaySX, txtNgayHH, txtNhaCungCap : JTextField
+        --Điện máy fields--
+        -txtBaoHanh, txtCongSuat : JTextField
+        --Sành sứ fields--
+        -txtNhaSanXuat, txtNgayNhapKho : JTextField
+        +KhoGUI()
+        -initUI() : void
+        -setupLayout() : void
+        -updateFieldsVisibility() : void
+        -loadData() : void
+        -xemDS() : void
+        -themMoi() : void
+        -sua() : void
+        -xoa() : void
+        -timSapHetHan() : void
+        -thongKe() : void
+    }
+}
+
+package "Business Layer" {
+    abstract class HangHoa {
+        #maHang : String
+        #tenHang : String
+        #soLuongTon : int
+        #donGia : double
+        +HangHoa(maHang, tenHang, soLuongTon, donGia)
+        +getMaHang() : String
+        +setMaHang(maHang : String) : void
+        +getTenHang() : String
+        +setTenHang(tenHang : String) : void
+        +getSoLuongTon() : int
+        +setSoLuongTon(soLuongTon : int) : void
+        +getDonGia() : double
+        +setDonGia(donGia : double) : void
+        +{abstract} tinhVAT() : double
+        +{abstract} toString() : String
+    }
+    
+    class ThucPham {
+        -ngaySanXuat : LocalDate
+        -ngayHetHan : LocalDate
+        -nhaCungCap : String
+        +ThucPham(maHang, tenHang, soLuongTon, donGia, ngaySX, ngayHH, nhaCungCap)
+        +getNgaySanXuat() : LocalDate
+        +setNgaySanXuat(ngaySX : LocalDate) : void
+        +getNgayHetHan() : LocalDate
+        +setNgayHetHan(ngayHH : LocalDate) : void
+        +getNhaCungCap() : String
+        +setNhaCungCap(nhaCungCap : String) : void
+        +tinhVAT() : double {return 0.05}
+        +toString() : String
+        +kiemTraHetHan() : boolean
+        +soNgayConLai() : long
+    }
+    
+    class DienMay {
+        -thoiGianBaoHanh : int
+        -congSuat : double
+        +DienMay(maHang, tenHang, soLuongTon, donGia, baoHanh, congSuat)
+        +getThoiGianBaoHanh() : int
+        +setThoiGianBaoHanh(baoHanh : int) : void
+        +getCongSuat() : double
+        +setCongSuat(congSuat : double) : void
+        +tinhVAT() : double {return 0.1}
+        +toString() : String
+    }
+    
+    class SanhSu {
+        -nhaSanXuat : String
+        -ngayNhapKho : LocalDate
+        +SanhSu(maHang, tenHang, soLuongTon, donGia, nhaSX, ngayNhap)
+        +getNhaSanXuat() : String
+        +setNhaSanXuat(nhaSX : String) : void
+        +getNgayNhapKho() : LocalDate
+        +setNgayNhapKho(ngayNhap : LocalDate) : void
+        +tinhVAT() : double {return 0.1}
+        +toString() : String
+    }
+}
+
+package "Data Access Layer" {
+    class HangHoaDAO {
+        -dbConnection : DatabaseConnection
+        +HangHoaDAO()
+        +themThucPham(thucPham : ThucPham) : boolean
+        +themDienMay(dienMay : DienMay) : boolean
+        +themSanhSu(sanhSu : SanhSu) : boolean
+        +layTatCaHangHoa() : List<HangHoa>
+        +layHangHoaTheoMa(maHang : String) : HangHoa
+        +capNhatHangHoa(hangHoa : HangHoa) : boolean
+        +xoaHangHoa(maHang : String) : boolean
+        +layHangSapHetHan() : List<ThucPham>
+        +tinhTongSoLuongTheoLoai() : Map<String, Integer>
+        +tinhTrungBinhDienMay() : double
+        +timKiemTheoTen(tenHang : String) : List<HangHoa>
+        -themThucPhamDirect(thucPham : ThucPham) : boolean
+        -themDienMayDirect(dienMay : DienMay) : boolean
+        -themSanhSuDirect(sanhSu : SanhSu) : boolean
+    }
+    
+    class DatabaseConnection {
+        -instance : DatabaseConnection {static}
+        -connection : Connection
+        -properties : Properties
+        -DatabaseConnection()
+        +getInstance() : DatabaseConnection {static}
+        -loadProperties() : void
+        -connect() : void
+        +getConnection() : Connection
+        +closeConnection() : void
+        +testConnection() : boolean
+        +isConnected() : boolean
+    }
+}
+
+package "Database Layer" {
+    class MySQL <<database>> {
+        Tables:
+        - HangHoa
+        - ThucPham  
+        - DienMay
+        - SanhSu
+        --
+        Stored Procedures:
+        - SP_ThemThucPham
+        - SP_ThemDienMay
+        - SP_ThemSanhSu
+        - SP_LayHangSapHetHan
+        --
+        Views:
+        - view_all_products
+        - view_expiring_products
+    }
+}
+
+' Relationships
+Main --> HangHoaDAO : uses
+KhoGUI --> HangHoaDAO : uses
+HangHoaDAO --> DatabaseConnection : uses
+DatabaseConnection --> MySQL : connects to
+
+HangHoa <|-- ThucPham : extends
+HangHoa <|-- DienMay : extends  
+HangHoa <|-- SanhSu : extends
+
+HangHoaDAO ..> HangHoa : creates
+HangHoaDAO ..> ThucPham : creates
+HangHoaDAO ..> DienMay : creates
+HangHoaDAO ..> SanhSu : creates
+
+note top of DatabaseConnection
+    Singleton Pattern
+    Quản lý kết nối MySQL
+    Tự động reconnect khi mất kết nối
+end note
+
+note top of HangHoa
+    Abstract Factory Pattern
+    Template Method Pattern
+    Polymorphism cho tính VAT
+end note
+
+note top of HangHoaDAO
+    Data Access Object Pattern
+    Repository Pattern
+    Fallback mechanism cho stored procedures
+end note
+
+note bottom of MySQL
+    Database: QuanLyKhoHang
+    Engine: InnoDB
+    Charset: utf8mb4_unicode_ci
+    Foreign Key Constraints enabled
+end note
+
+@enduml

@@ -1,0 +1,154 @@
+@startuml Data Flow Diagram - Warehouse Management System
+
+!theme plain
+skinparam backgroundColor white
+skinparam roundcorner 15
+
+title 🔄 Hệ thống Quản lý Kho Hàng hóa - Sơ đồ luồng dữ liệu
+
+!define PROCESS_COLOR #E3F2FD
+!define EXTERNAL_COLOR #FFF3E0  
+!define DATASTORE_COLOR #F3E5F5
+
+actor "👤 Người dùng\n(User)" as User EXTERNAL_COLOR
+actor "👨‍💼 Quản lý kho\n(Manager)" as Manager EXTERNAL_COLOR
+
+rectangle "🖥️ Giao diện người dùng\n(User Interface)" as UI PROCESS_COLOR
+rectangle "🔧 Xử lý nghiệp vụ\n(Business Logic)" as BL PROCESS_COLOR  
+rectangle "🗃️ Truy cập dữ liệu\n(Data Access)" as DA PROCESS_COLOR
+rectangle "🔐 Quản lý kết nối\n(Connection Manager)" as CM PROCESS_COLOR
+
+cylinder "🗄️ Cơ sở dữ liệu MySQL\n(QuanLyKhoHang)" as DB DATASTORE_COLOR
+
+' Luồng dữ liệu chính
+User --> UI : "1. Thông tin hàng hóa\n(Product Info)"
+Manager --> UI : "2. Yêu cầu báo cáo\n(Report Request)"
+
+UI --> BL : "3. Dữ liệu đã validate\n(Validated Data)"
+UI <-- BL : "4. Kết quả xử lý\n(Processing Result)"
+
+BL --> DA : "5. Lệnh CRUD\n(CRUD Commands)"
+BL <-- DA : "6. Dữ liệu thô\n(Raw Data)"
+
+DA --> CM : "7. Yêu cầu kết nối\n(Connection Request)"
+DA <-- CM : "8. Kết nối DB\n(DB Connection)"
+
+CM --> DB : "9. SQL Queries/Procedures"
+CM <-- DB : "10. ResultSet/Status"
+
+' Luồng phản hồi
+UI --> User : "11. Thông báo kết quả\n(Result Notification)"
+UI --> Manager : "12. Báo cáo thống kê\n(Statistical Report)"
+
+' Luồng dữ liệu chi tiết cho từng chức năng
+
+package "📋 Quản lý Thực phẩm" {
+    User --> UI : "Thông tin thực phẩm:\n- Mã hàng\n- Tên hàng\n- Số lượng\n- Đơn giá\n- Ngày sản xuất\n- Ngày hết hạn\n- Nhà cung cấp"
+    
+    UI --> BL : "Validate:\n- Ngày HH > Ngày SX\n- Số lượng >= 0\n- Đơn giá > 0"
+    
+    BL --> DA : "SP_ThemThucPham()\nhoặc INSERT direct"
+    
+    DA --> DB : "INSERT INTO HangHoa\nINSERT INTO ThucPham"
+}
+
+package "⚡ Quản lý Điện máy" {
+    User --> UI : "Thông tin điện máy:\n- Thông tin cơ bản\n- Thời gian bảo hành\n- Công suất"
+    
+    UI --> BL : "Validate:\n- Bảo hành > 0\n- Công suất > 0"
+    
+    BL --> DA : "SP_ThemDienMay()\nhoặc INSERT direct"
+    
+    DA --> DB : "INSERT INTO HangHoa\nINSERT INTO DienMay"
+}
+
+package "🏺 Quản lý Sành sứ" {
+    User --> UI : "Thông tin sành sứ:\n- Thông tin cơ bản\n- Nhà sản xuất\n- Ngày nhập kho"
+    
+    UI --> BL : "Validate:\n- Ngày nhập <= Hôm nay"
+    
+    BL --> DA : "SP_ThemSanhSu()\nhoặc INSERT direct"
+    
+    DA --> DB : "INSERT INTO HangHoa\nINSERT INTO SanhSu"
+}
+
+package "📊 Báo cáo & Thống kê" {
+    Manager --> UI : "Yêu cầu báo cáo:\n- Tổng số lượng theo loại\n- Trung bình tồn kho\n- Sản phẩm sắp hết hạn"
+    
+    UI --> BL : "Xử lý request\nTính toán thống kê"
+    
+    BL --> DA : "Queries phức tạp:\n- GROUP BY LoaiHang\n- AVG(SoLuongTon)\n- DATE calculations"
+    
+    DA --> DB : "SELECT với JOIN\nAggregation functions\nStored procedures"
+    
+    DB --> DA : "Dữ liệu tổng hợp"
+    DA --> BL : "Kết quả thống kê"
+    BL --> UI : "Báo cáo đã format"
+    UI --> Manager : "📈 Báo cáo hoàn chỉnh:\n- Charts/Tables\n- Summary data\n- Insights"
+}
+
+package "🔍 Tìm kiếm & Lọc" {
+    User --> UI : "Tiêu chí tìm kiếm:\n- Theo tên\n- Theo loại\n- Sắp hết hạn"
+    
+    UI --> BL : "Xây dựng query\nĐiều kiện WHERE"
+    
+    BL --> DA : "Dynamic queries\nParameterized statements"
+    
+    DA --> DB : "SELECT với WHERE\nLIKE, BETWEEN\nDATE functions"
+    
+    DB --> DA : "Filtered ResultSet"
+    DA --> BL : "List<HangHoa>"
+    BL --> UI : "Kết quả đã phân trang"
+    UI --> User : "📋 Danh sách kết quả"
+}
+
+' Ghi chú về luồng dữ liệu
+note top of UI
+    **Giao diện người dùng**
+    - Swing GUI (KhoGUI)
+    - Console Interface (Main)
+    - Input validation
+    - Result display
+end note
+
+note top of BL
+    **Xử lý nghiệp vụ**
+    - Business rules validation
+    - Object creation (ThucPham, DienMay, SanhSu)
+    - Data transformation
+    - Error handling
+end note
+
+note top of DA
+    **Truy cập dữ liệu**
+    - HangHoaDAO
+    - CRUD operations
+    - Stored procedure calls
+    - Fallback mechanisms
+end note
+
+note top of CM
+    **Quản lý kết nối**
+    - DatabaseConnection (Singleton)
+    - Connection pooling
+    - Auto-reconnect
+    - Properties management
+end note
+
+note top of DB
+    **Cơ sở dữ liệu**
+    - Tables: HangHoa, ThucPham, DienMay, SanhSu
+    - Stored Procedures
+    - Views
+    - Constraints & Indexes
+end note
+
+' Luồng lỗi và xử lý ngoại lệ
+User --> UI : "❌ Dữ liệu không hợp lệ"
+UI --> User : "⚠️ Thông báo lỗi validation"
+
+DA --> BL : "❌ Database error"
+BL --> UI : "🔄 Retry hoặc Fallback"
+UI --> User : "⚠️ Thông báo lỗi hệ thống"
+
+@enduml

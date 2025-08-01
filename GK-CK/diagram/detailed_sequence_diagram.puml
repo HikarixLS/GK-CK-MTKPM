@@ -1,0 +1,232 @@
+@startuml Detailed CRUD Operations - Sequence Diagram
+
+!theme plain
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 15
+skinparam maxmessagesize 70
+
+actor User as "👤 Người dùng"
+participant GUI as "🖥️ KhoGUI\n<<Swing Interface>>"
+participant DAO as "🗃️ HangHoaDAO\n<<Data Access Layer>>"
+participant Product as "📦 HangHoa\n<<Abstract Entity>>"
+participant Food as "🥗 ThucPham\n<<Concrete Entity>>"
+participant Electric as "⚡ DienMay\n<<Concrete Entity>>"
+participant Ceramic as "🏺 SanhSu\n<<Concrete Entity>>"
+participant DB as "🔗 DatabaseConnection\n<<Singleton>>"
+database MySQL as "🗄️ MySQL Database\n<<QuanLyKhoHang>>"
+
+title 🏪 Hệ thống Quản lý Kho - Chi tiết thao tác CRUD
+
+== 1️⃣ USE CASE: Thêm Thực phẩm mới ==
+
+User -> GUI: 1. Nhập thông tin thực phẩm
+activate GUI
+note right: Mã hàng, tên, số lượng,\nđơn giá, ngày SX, ngày HH,\nnhà cung cấp
+
+GUI -> GUI: 2. Validate input data
+alt Dữ liệu hợp lệ
+    GUI -> Food: 3. new ThucPham(maHang, tenHang, soLuong,\n                 donGia, ngaySX, ngayHH, nhaCungCap)
+    activate Food
+    
+    Food -> Food: 4. Validate business rules
+    note right: - Kiểm tra ngày hết hạn > ngày SX\n- Kiểm tra số lượng >= 0\n- Kiểm tra đơn giá > 0
+    
+    Food --> GUI: 5. ThucPham object created
+    deactivate Food
+    
+    GUI -> DAO: 6. themThucPham(thucPham)
+    activate DAO
+    
+    DAO -> DB: 7. getConnection()
+    activate DB
+    DB -> MySQL: 8. Establish connection
+    activate MySQL
+    MySQL --> DB: 9. Connection ready
+    DB --> DAO: 10. Connection object
+    deactivate DB
+    
+    DAO -> MySQL: 11. CALL SP_ThemThucPham(maHang, tenHang,\n                      soLuong, donGia, ngaySX, ngayHH, nhaCungCap)
+    
+    alt Stored Procedure thành công
+        MySQL --> DAO: 12a. SUCCESS result
+        note right: Stored procedure tự động:\n- INSERT vào HangHoa\n- INSERT vào ThucPham\n- Set VAT = 5%
+    else Stored Procedure thất bại
+        MySQL --> DAO: 12b. ERROR result
+        DAO -> DAO: 13. themThucPhamDirect() [Fallback]
+        
+        DAO -> MySQL: 14a. BEGIN TRANSACTION
+        DAO -> MySQL: 14b. INSERT INTO HangHoa\n       (MaHang, TenHang, LoaiHang, SoLuongTon, DonGia, VAT)\n       VALUES (?, ?, 'ThucPham', ?, ?, 0.05)
+        DAO -> MySQL: 14c. INSERT INTO ThucPham\n       (MaHang, NgaySanXuat, NgayHetHan, NhaCungCap)\n       VALUES (?, ?, ?, ?)
+        DAO -> MySQL: 14d. COMMIT
+        MySQL --> DAO: 14e. Transaction successful
+    end
+    
+    deactivate MySQL
+    DAO --> GUI: 15. boolean result (true)
+    deactivate DAO
+    
+    GUI -> GUI: 16. loadData() - Refresh table
+    GUI -> DAO: 17. layTatCaHangHoa()
+    activate DAO
+    DAO -> MySQL: 18. SELECT * FROM view_all_products
+    activate MySQL
+    MySQL --> DAO: 19. Updated ResultSet
+    deactivate MySQL
+    DAO --> GUI: 20. List<HangHoa> updated
+    deactivate DAO
+    
+    GUI --> User: 21. ✅ "Thêm thực phẩm thành công!"
+    
+else Dữ liệu không hợp lệ
+    GUI --> User: ❌ "Vui lòng kiểm tra lại thông tin!"
+end
+deactivate GUI
+
+== 2️⃣ USE CASE: Xem danh sách tất cả hàng hóa ==
+
+User -> GUI: 1. Click button "📋 Xem tất cả"
+activate GUI
+
+GUI -> DAO: 2. layTatCaHangHoa()
+activate DAO
+
+DAO -> DB: 3. getConnection()
+activate DB
+DB --> DAO: 4. Connection
+deactivate DB
+
+DAO -> MySQL: 5. SELECT hh.MaHang, hh.TenHang, hh.LoaiHang, hh.SoLuongTon,\n              hh.DonGia, hh.VAT,\n              tp.NgaySanXuat, tp.NgayHetHan, tp.NhaCungCap,\n              dm.ThoiGianBaoHanh, dm.CongSuat,\n              ss.NhaSanXuat, ss.NgayNhapKho\n       FROM HangHoa hh\n       LEFT JOIN ThucPham tp ON hh.MaHang = tp.MaHang\n       LEFT JOIN DienMay dm ON hh.MaHang = dm.MaHang\n       LEFT JOIN SanhSu ss ON hh.MaHang = ss.MaHang
+activate MySQL
+
+MySQL --> DAO: 6. ResultSet with all products
+deactivate MySQL
+
+DAO -> DAO: 7. Process ResultSet
+loop Cho mỗi row trong ResultSet
+    alt LoaiHang = 'ThucPham'
+        DAO -> Food: 8a. new ThucPham(...)
+        activate Food
+        Food --> DAO: ThucPham object
+        deactivate Food
+    else LoaiHang = 'DienMay'
+        DAO -> Electric: 8b. new DienMay(...)
+        activate Electric
+        Electric --> DAO: DienMay object
+        deactivate Electric
+    else LoaiHang = 'SanhSu'
+        DAO -> Ceramic: 8c. new SanhSu(...)
+        activate Ceramic
+        Ceramic --> DAO: SanhSu object
+        deactivate Ceramic
+    end
+    DAO -> DAO: Add to products list
+end
+
+DAO --> GUI: 9. List<HangHoa> complete
+deactivate DAO
+
+GUI -> GUI: 10. Clear table model
+GUI -> GUI: 11. Populate table with new data
+loop Cho mỗi HangHoa trong list
+    GUI -> GUI: 12. addRow(maHang, tenHang, loaiHang,\n              soLuong, donGia, vatPercent)
+end
+
+GUI --> User: 13. 📋 Danh sách hàng hóa được hiển thị
+deactivate GUI
+
+== 3️⃣ USE CASE: Tìm kiếm sản phẩm sắp hết hạn ==
+
+User -> GUI: 1. Click "⏰ Sắp hết hạn (1 tuần)"
+activate GUI
+
+GUI -> DAO: 2. layHangSapHetHan()
+activate DAO
+
+DAO -> MySQL: 3. CALL SP_LayHangSapHetHan() hoặc\n       SELECT * FROM ThucPham tp\n       JOIN HangHoa hh ON tp.MaHang = hh.MaHang\n       WHERE tp.NgayHetHan BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+activate MySQL
+
+MySQL --> DAO: 4. ResultSet sản phẩm sắp hết hạn
+deactivate MySQL
+
+DAO -> DAO: 5. Convert to ThucPham objects
+loop Cho mỗi row
+    DAO -> Food: 6. new ThucPham(...)
+    activate Food
+    Food --> DAO: ThucPham object
+    deactivate Food
+end
+
+DAO --> GUI: 7. List<ThucPham> sắp hết hạn
+deactivate DAO
+
+GUI -> GUI: 8. Hiển thị trong txtKQ (TextArea)
+GUI --> User: 9. 📝 Danh sách sản phẩm sắp hết hạn
+deactivate GUI
+
+== 4️⃣ USE CASE: Cập nhật hàng hóa ==
+
+User -> GUI: 1. Chọn row trong table
+activate GUI
+GUI -> GUI: 2. selectItem() - Load data to form
+
+User -> GUI: 3. Sửa thông tin
+User -> GUI: 4. Click "✏️ Sửa"
+
+GUI -> GUI: 5. Validate new data
+alt Dữ liệu hợp lệ
+    GUI -> DAO: 6. capNhatHangHoa(hangHoa)
+    activate DAO
+    
+    DAO -> MySQL: 7. UPDATE HangHoa SET TenHang=?, SoLuongTon=?, DonGia=?\n       WHERE MaHang=?
+    activate MySQL
+    
+    alt Loại hàng = ThucPham
+        DAO -> MySQL: 8a. UPDATE ThucPham SET NgaySanXuat=?, NgayHetHan=?, NhaCungCap=?\n        WHERE MaHang=?
+    else Loại hàng = DienMay
+        DAO -> MySQL: 8b. UPDATE DienMay SET ThoiGianBaoHanh=?, CongSuat=?\n        WHERE MaHang=?
+    else Loại hàng = SanhSu
+        DAO -> MySQL: 8c. UPDATE SanhSu SET NhaSanXuat=?, NgayNhapKho=?\n        WHERE MaHang=?
+    end
+    
+    MySQL --> DAO: 9. Update successful
+    deactivate MySQL
+    DAO --> GUI: 10. true
+    deactivate DAO
+    
+    GUI -> GUI: 11. loadData() - Refresh
+    GUI --> User: 12. ✅ "Cập nhật thành công!"
+else Dữ liệu không hợp lệ
+    GUI --> User: ❌ "Dữ liệu không hợp lệ!"
+end
+deactivate GUI
+
+== 5️⃣ USE CASE: Xóa hàng hóa ==
+
+User -> GUI: 1. Chọn row và click "🗑️ Xóa"
+activate GUI
+
+GUI -> GUI: 2. Confirm dialog
+alt User confirms
+    GUI -> DAO: 3. xoaHangHoa(maHang)
+    activate DAO
+    
+    DAO -> MySQL: 4. BEGIN TRANSACTION
+    activate MySQL
+    DAO -> MySQL: 5. DELETE FROM ThucPham/DienMay/SanhSu WHERE MaHang=?
+    DAO -> MySQL: 6. DELETE FROM HangHoa WHERE MaHang=?
+    DAO -> MySQL: 7. COMMIT
+    MySQL --> DAO: 8. Transaction successful
+    deactivate MySQL
+    
+    DAO --> GUI: 9. true
+    deactivate DAO
+    
+    GUI -> GUI: 10. loadData()
+    GUI --> User: 11. ✅ "Xóa thành công!"
+else User cancels
+    GUI --> User: 🚫 "Đã hủy thao tác"
+end
+deactivate GUI
+
+@enduml

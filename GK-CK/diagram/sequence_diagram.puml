@@ -1,0 +1,254 @@
+@startuml Warehouse Management System - Sequence Diagram
+
+!theme plain
+skinparam backgroundColor white
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+skinparam sequenceParticipant underline
+
+actor User as "Người dùng"
+participant "START.bat" as Start <<Batch Script>>
+participant "Main" as Main <<Application>>
+participant "KhoGUI" as GUI <<User Interface>>
+participant "HangHoaDAO" as DAO <<Data Access>>
+participant "DatabaseConnection" as DB <<Database>>
+participant "HangHoa" as Product <<Entity>>
+participant "ThucPham" as Food <<Concrete Product>>
+participant "DienMay" as Electric <<Concrete Product>>
+participant "SanhSu" as Ceramic <<Concrete Product>>
+database "MySQL Database" as MySQL
+
+title Hệ thống Quản lý Kho Hàng hóa - Sơ đồ tuần tự
+
+== Khởi động hệ thống ==
+User -> Start: Chạy START.bat
+activate Start
+Start -> Start: Kiểm tra Java
+Start -> Start: Hiển thị menu chính
+Start -> User: Chọn mode (GUI/Console)
+deactivate Start
+
+alt GUI Mode được chọn
+    User -> Start: Chọn option 1 (GUI Mode)
+    activate Start
+    Start -> GUI: Khởi tạo KhoGUI
+    activate GUI
+    
+    == Kết nối Database ==
+    GUI -> DAO: new HangHoaDAO()
+    activate DAO
+    DAO -> DB: DatabaseConnection.getInstance()
+    activate DB
+    DB -> DB: loadProperties()
+    DB -> DB: connect()
+    DB -> MySQL: Establish connection
+    activate MySQL
+    MySQL --> DB: Connection established
+    DB --> DAO: Database connection ready
+    deactivate DB
+    DAO --> GUI: DAO initialized
+    deactivate DAO
+    
+    GUI -> GUI: initUI()
+    GUI -> GUI: loadData()
+    GUI --> Start: GUI started successfully
+    deactivate GUI
+    Start --> User: GUI Interface displayed
+    deactivate Start
+
+else Console Mode được chọn
+    User -> Start: Chọn option 2 (Console Mode)
+    activate Start
+    Start -> Main: java Main
+    activate Main
+    
+    == Kết nối Database ==
+    Main -> DAO: new HangHoaDAO()
+    activate DAO
+    DAO -> DB: DatabaseConnection.getInstance()
+    activate DB
+    DB -> MySQL: Connect to database
+    MySQL --> DB: Connection established
+    DB --> DAO: Database ready
+    deactivate DB
+    DAO --> Main: DAO initialized
+    deactivate DAO
+    
+    Main -> Main: showMainMenu()
+    Main --> Start: Console started
+    deactivate Main
+    Start --> User: Console menu displayed
+    deactivate Start
+end
+
+== Thao tác CRUD (Ví dụ: Thêm sản phẩm) ==
+User -> GUI: Nhập thông tin sản phẩm
+activate GUI
+User -> GUI: Chọn loại hàng hóa
+GUI -> GUI: updateFieldsVisibility()
+
+alt Thêm Thực phẩm
+    User -> GUI: Nhập thông tin thực phẩm
+    GUI -> Food: new ThucPham(...)
+    activate Food
+    Food --> GUI: ThucPham object created
+    deactivate Food
+    
+    GUI -> DAO: themThucPham(thucPham)
+    activate DAO
+    DAO -> DB: getConnection()
+    activate DB
+    DB --> DAO: Connection
+    deactivate DB
+    
+    DAO -> MySQL: CALL SP_ThemThucPham(...)
+    activate MySQL
+    
+    alt Stored Procedure thành công
+        MySQL --> DAO: Success result
+        DAO --> GUI: true
+    else Stored Procedure lỗi
+        MySQL --> DAO: Error
+        DAO -> DAO: themThucPhamDirect()
+        DAO -> MySQL: INSERT INTO HangHoa
+        DAO -> MySQL: INSERT INTO ThucPham
+        MySQL --> DAO: Success
+        DAO --> GUI: true
+    end
+    deactivate MySQL
+    deactivate DAO
+    
+    GUI -> GUI: loadData()
+    GUI --> User: Thông báo thành công
+    deactivate GUI
+
+else Thêm Điện máy
+    User -> GUI: Nhập thông tin điện máy
+    GUI -> Electric: new DienMay(...)
+    activate Electric
+    Electric --> GUI: DienMay object created
+    deactivate Electric
+    
+    GUI -> DAO: themDienMay(dienMay)
+    activate DAO
+    DAO -> MySQL: CALL SP_ThemDienMay(...)
+    activate MySQL
+    MySQL --> DAO: Result
+    deactivate MySQL
+    DAO --> GUI: boolean result
+    deactivate DAO
+    
+    GUI --> User: Thông báo kết quả
+    deactivate GUI
+
+else Thêm Sành sứ
+    User -> GUI: Nhập thông tin sành sứ
+    GUI -> Ceramic: new SanhSu(...)
+    activate Ceramic
+    Ceramic --> GUI: SanhSu object created
+    deactivate Ceramic
+    
+    GUI -> DAO: themSanhSu(sanhSu)
+    activate DAO
+    DAO -> MySQL: CALL SP_ThemSanhSu(...)
+    activate MySQL
+    MySQL --> DAO: Result
+    deactivate MySQL
+    DAO --> GUI: boolean result
+    deactivate DAO
+    
+    GUI --> User: Thông báo kết quả
+end
+
+== Xem danh sách hàng hóa ==
+User -> GUI: Click "Xem tất cả"
+activate GUI
+GUI -> DAO: layTatCaHangHoa()
+activate DAO
+DAO -> MySQL: SELECT * FROM view_all_products
+activate MySQL
+MySQL --> DAO: ResultSet
+deactivate MySQL
+DAO -> DAO: Xử lý ResultSet
+loop Cho mỗi row trong ResultSet
+    alt Loại = ThucPham
+        DAO -> Food: new ThucPham(...)
+        activate Food
+        Food --> DAO: ThucPham object
+        deactivate Food
+    else Loại = DienMay
+        DAO -> Electric: new DienMay(...)
+        activate Electric
+        Electric --> DAO: DienMay object
+        deactivate Electric
+    else Loại = SanhSu
+        DAO -> Ceramic: new SanhSu(...)
+        activate Ceramic
+        Ceramic --> DAO: SanhSu object
+        deactivate Ceramic
+    end
+end
+DAO --> GUI: List<HangHoa>
+deactivate DAO
+GUI -> GUI: Cập nhật table model
+GUI --> User: Hiển thị danh sách
+deactivate GUI
+
+== Tìm kiếm sản phẩm sắp hết hạn ==
+User -> GUI: Click "Sắp hết hạn"
+activate GUI
+GUI -> DAO: layHangSapHetHan()
+activate DAO
+DAO -> MySQL: CALL SP_LayHangSapHetHan()
+activate MySQL
+MySQL --> DAO: ResultSet (sản phẩm sắp hết hạn)
+deactivate MySQL
+DAO --> GUI: List<ThucPham>
+deactivate DAO
+GUI --> User: Hiển thị danh sách sản phẩm sắp hết hạn
+deactivate GUI
+
+== Tính toán thống kê ==
+User -> GUI: Click "Thống kê"
+activate GUI
+GUI -> DAO: tinhTongSoLuongTheoLoai()
+activate DAO
+DAO -> MySQL: SELECT COUNT(*) FROM HangHoa GROUP BY LoaiHang
+activate MySQL
+MySQL --> DAO: Kết quả thống kê
+deactivate MySQL
+DAO --> GUI: Map<String, Integer>
+deactivate DAO
+
+GUI -> DAO: tinhTrungBinhDienMay()
+activate DAO
+DAO -> MySQL: SELECT AVG(SoLuongTon) FROM HangHoa WHERE LoaiHang='DienMay'
+activate MySQL
+MySQL --> DAO: Giá trị trung bình
+deactivate MySQL
+DAO --> GUI: double avgQuantity
+deactivate DAO
+
+GUI --> User: Hiển thị thống kê
+deactivate GUI
+
+== Đóng ứng dụng ==
+User -> GUI: Đóng cửa sổ
+activate GUI
+GUI -> DAO: Cleanup resources
+activate DAO
+DAO -> DB: closeConnection()
+activate DB
+DB -> MySQL: Close connection
+activate MySQL
+MySQL --> DB: Connection closed
+deactivate MySQL
+DB --> DAO: Cleanup completed
+deactivate DB
+DAO --> GUI: Resources cleaned
+deactivate DAO
+GUI --> User: Ứng dụng đóng
+deactivate GUI
+
+@enduml
