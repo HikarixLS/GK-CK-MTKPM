@@ -6,8 +6,6 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -645,7 +643,6 @@ public class KhoGUI extends JFrame {
     private void updateStatisticsBar() {
         List<HangHoa> danhSach = controller.layDanhSachHangHoa();
         int tongSoLuong = danhSach.size();
-        double tongGiaTri = controller.tinhTongGiaTriKho();
         double tongGiaTriCoVAT = controller.tinhTongGiaTriCoVAT();
         
         lblTongSoLuong.setText("Tổng SP: " + tongSoLuong);

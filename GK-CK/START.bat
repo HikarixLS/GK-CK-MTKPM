@@ -1,332 +1,229 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
-title 🏬 QUẢN LÝ KHO HÀNG HÓA - Tích Hợp Đầy Đủ
+title 🏬 QUAN LY KHO HANG HOA
 color 0A
 
-REM ========================================
-REM        CẤU HÌNH JAVA TỰ ĐỘNG
-REM ========================================
-set JAVA_EXE=java
-set JAVAC_EXE=javac
-
-REM Đảm bảo làm việc trong đúng thư mục
+REM Chuyen den thu muc hien tai
 cd /d "%~dp0"
 
-REM Kiểm tra Java trong PATH trước
-where java >nul 2>&1
+REM Thiet lap Java
+set "JAVA_EXE=java"
+set "JAVAC_EXE=javac"
+
+REM Kiem tra Java
+java -version >nul 2>&1
 if !ERRORLEVEL! EQU 0 (
-    REM Java đã có trong PATH, sử dụng luôn
-    set JAVA_EXE=java
-    set JAVAC_EXE=javac
-    echo    ✅ Sử dụng Java từ PATH: java và javac
+    echo ✅ Java da san sang
 ) else (
-    REM Nếu không có trong PATH, thử đường dẫn đầy đủ trên ổ H:
-    if exist "H:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe" (
+    REM Tim Java tu cac duong dan pho bien
+    if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe" (
+        set "JAVA_EXE=C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe"
+        set "JAVAC_EXE=C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\javac.exe"
+        echo ✅ Su dung Java tu Eclipse Adoptium
+    ) else if exist "H:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe" (
         set "JAVA_EXE=H:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe"
         set "JAVAC_EXE=H:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\javac.exe"
-        echo    ✅ Sử dụng Java từ ổ H: Eclipse Adoptium
-    ) else if exist "H:\Java\jdk-21\bin\java.exe" (
-        set "JAVA_EXE=H:\Java\jdk-21\bin\java.exe"
-        set "JAVAC_EXE=H:\Java\jdk-21\bin\javac.exe"
-        echo    ✅ Sử dụng Java từ ổ H: H:\Java\jdk-21
-    ) else if exist "H:\jdk\bin\java.exe" (
-        set "JAVA_EXE=H:\jdk\bin\java.exe"
-        set "JAVAC_EXE=H:\jdk\bin\javac.exe"
-        echo    ✅ Sử dụng Java từ ổ H: H:\jdk
+        echo ✅ Su dung Java tu o H
     ) else (
-        REM Fallback to C: if not found on H:
-        if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe" (
-            set "JAVA_EXE=C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe"
-            set "JAVAC_EXE=C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\javac.exe"
-            echo    ✅ Sử dụng Java từ ổ C: Eclipse Adoptium
-        ) else (
-            echo    ❌ Không tìm thấy Java! Hãy cài đặt Java JDK
-        )
+        echo ❌ Khong tim thay Java!
+        echo 💡 Cai dat Java tu: https://adoptium.net/
+        pause
+        exit /b 1
     )
 )
 
 :MAIN_MENU
 cls
 echo.
-echo    🏬 =============================================== 🏬
-echo           CHƯƠNG TRÌNH QUẢN LÝ KHO HÀNG HÓA
-echo    🏬 =============================================== 🏬
+echo 🏬 =============================================== 🏬
+echo        CHUONG TRINH QUAN LY KHO HANG HOA
+echo 🏬 =============================================== 🏬
 echo.
-echo    📋 MENU CHÍNH:
-echo    ================
-echo    [1] 🎨 GUI Mode      - Giao diện đồ họa
-echo    [2] 💻 Console Mode  - Giao diện dòng lệnh
-echo    [3] 🔨 Compile       - Biên dịch source code
-echo    [4] ❌ Thoát
+echo 📋 MENU:
+echo [1] 🎨 GUI Mode
+echo [2] 💻 Console Mode  
+echo [3] 🔨 Compile Code
+echo [4] 🧹 Clean Build
+echo [5] ❌ Exit
 echo.
-echo    🏬 =============================================== 🏬
-echo.
-set /p choice="    ➤ Nhập lựa chọn (1-4): "
+set /p "choice=➤ Chon (1-5): "
 
-if "%choice%"=="1" goto GUI_MODE
-if "%choice%"=="2" goto CONSOLE_MODE
-if "%choice%"=="3" goto COMPILE
-if "%choice%"=="4" goto EXIT
+if "%choice%"=="1" (
+    call :RUN_GUI
+    goto MAIN_MENU
+)
+if "%choice%"=="2" (
+    call :RUN_CONSOLE
+    goto MAIN_MENU
+)
+if "%choice%"=="3" (
+    call :COMPILE_CODE
+    goto MAIN_MENU
+)
+if "%choice%"=="4" (
+    call :CLEAN_BUILD
+    goto MAIN_MENU
+)
+if "%choice%"=="5" (
+    goto EXIT_PROGRAM
+)
 
-echo    ❌ Lựa chọn không hợp lệ!
+echo ❌ Lua chon khong hop le!
 timeout /t 2 >nul
 goto MAIN_MENU
 
-REM ========================================
-REM               GUI MODE
-REM ========================================
-:GUI_MODE
+:RUN_GUI
 cls
-echo.
-echo    🎨 ===================================== 🎨
-echo              KHỞI ĐỘNG GUI MODE
-echo    🎨 ===================================== 🎨
-echo.
-
-REM Kiểm tra Java
-echo    📋 Kiểm tra Java Runtime...
-call %JAVA_EXE% -version >nul 2>&1
-if !ERRORLEVEL! NEQ 0 (
-    echo    ❌ Java chưa được cài đặt hoặc không tìm thấy!
-    echo    💡 Vui lòng cài đặt Java JDK từ: https://adoptium.net/
-    echo    💡 Hoặc thêm Java vào PATH của Windows.
-    echo.
-    echo    🔄 Quay lại menu chính...
-    timeout /t 5 >nul
-    goto MAIN_MENU
+echo 🎨 Khoi dong GUI...
+if not exist "bin\view\Main.class" (
+    echo ⚠️ Chua bien dich! Dang bien dich...
+    call :COMPILE_CODE
+    if !ERRORLEVEL! NEQ 0 (
+        echo ❌ Bien dich that bai!
+        pause
+        exit /b 1
+    )
 )
-
-echo    ✅ Java OK! Đang khởi động GUI...
-echo    🔍 Kiểm tra XAMPP và MySQL...
-echo.
-
-REM Kiểm tra file compiled
-if not exist "bin\view\*.class" (
-    echo    ⚠️  Chưa có file .class! Đang tự động biên dịch...
-    echo.
-    goto COMPILE
-)
-
-call "%JAVA_EXE%" -cp "%~dp0bin;%~dp0lib\mysql-connector-java.jar" view.Main gui
-
+echo Chay ung dung GUI...
+"!JAVA_EXE!" -cp "bin;lib\mysql-connector-java.jar" view.Main gui
 if !ERRORLEVEL! NEQ 0 (
-    echo.
-    echo    ❌ Lỗi chạy ứng dụng MVC.
-    echo    💡 Hãy kiểm tra XAMPP đã bật MySQL chưa.
-    echo    💡 Hoặc thử biên dịch lại bằng chọn [3] Compile
+    echo ❌ Loi chay GUI
     pause
-) else (
-    echo.
-    echo    ✅ GUI đã đóng thành công.
 )
-timeout /t 3 >nul
-goto MAIN_MENU
+exit /b 0
 
-REM ========================================
-REM             CONSOLE MODE
-REM ========================================
-:CONSOLE_MODE
+:RUN_CONSOLE
 cls
-echo.
-echo    💻 ===================================== 💻
-echo            KHỞI ĐỘNG CONSOLE MODE
-echo    💻 ===================================== 💻
-echo.
-
-REM Kiểm tra Java
-echo    📋 Kiểm tra Java Runtime...
-call %JAVA_EXE% -version >nul 2>&1
-if !ERRORLEVEL! NEQ 0 (
-    echo    ❌ Java chưa được cài đặt hoặc không tìm thấy!
-    echo    💡 Vui lòng cài đặt Java JDK từ: https://adoptium.net/
-    echo    💡 Hoặc thêm Java vào PATH của Windows.
-    echo.
-    echo    🔄 Quay lại menu chính...
-    timeout /t 5 >nul
-    goto MAIN_MENU
+echo 💻 Khoi dong Console...
+if not exist "bin\view\Main.class" (
+    echo ⚠️ Chua bien dich! Dang bien dich...
+    call :COMPILE_CODE
+    if !ERRORLEVEL! NEQ 0 (
+        echo ❌ Bien dich that bai!
+        pause
+        exit /b 1
+    )
 )
-
-echo    ✅ Java OK! Đang khởi động Console...
-echo    🔍 Kiểm tra XAMPP và MySQL...
-echo.
-
-REM Kiểm tra file compiled
-if not exist "bin\view\*.class" (
-    echo    ⚠️  Chưa có file .class! Đang tự động biên dịch...
-    echo.
-    goto COMPILE
-)
-
-call "%JAVA_EXE%" -cp "%~dp0bin;%~dp0lib\mysql-connector-java.jar" view.Main console
-
+echo Chay ung dung Console...
+"!JAVA_EXE!" -cp "bin;lib\mysql-connector-java.jar" view.Main console
 if !ERRORLEVEL! NEQ 0 (
-    echo.
-    echo    ❌ Lỗi chạy console mode.
-    echo    💡 Hãy kiểm tra XAMPP đã bật MySQL chưa.
-    echo    💡 Hoặc thử biên dịch lại bằng chọn [3] Compile
+    echo ❌ Loi chay Console
     pause
-) else (
-    echo.
-    echo    ✅ Console mode đã đóng thành công.
 )
-timeout /t 3 >nul
-goto MAIN_MENU
+exit /b 0
 
-REM ========================================
-REM               COMPILE CODE
-REM ========================================
-:COMPILE
+:COMPILE_CODE
 cls
-echo.
-echo    🔨 ===================================== 🔨
-echo           BIÊN DỊCH SOURCE CODE JAVA
-echo    🔨 ===================================== 🔨
-echo.
+echo 🔨 Bien dich Java...
 
-REM Kiểm tra Java Compiler
-echo    📋 KIỂM TRA JAVA COMPILER:
-echo    ===========================
-call %JAVAC_EXE% -version >nul 2>&1
+REM Kiem tra javac
+"!JAVAC_EXE!" -version >nul 2>&1
 if !ERRORLEVEL! NEQ 0 (
-    echo    ❌ Java Compiler không tìm thấy!
-    echo    💡 Hãy cài đặt Java JDK từ: https://adoptium.net/
-    echo.
+    echo ❌ Khong tim thay javac!
     pause
-    goto MAIN_MENU
+    exit /b 1
 )
-echo    ✅ Java Compiler: OK
-echo.
 
-REM Tạo thư mục bin nếu chưa có
-echo    📋 CHUẨN BỊ THƯ MỤC:
-echo    =====================
-if not exist "bin" (
-    mkdir bin
-    echo    ✅ Đã tạo thư mục bin/
+REM Tao thu muc
+if not exist "bin" mkdir "bin"
+if not exist "bin\model" mkdir "bin\model"
+if not exist "bin\controller" mkdir "bin\controller"
+if not exist "bin\view" mkdir "bin\view"
+
+REM Kiem tra MySQL JAR
+if not exist "lib\mysql-connector-java.jar" (
+    echo ❌ Thieu MySQL JAR trong thu muc lib\
+    pause
+    exit /b 1
+)
+
+echo 📦 Bien dich cac file...
+
+REM Bien dich model layer
+echo - Model layer...
+if exist "src\model\*.java" (
+    "!JAVAC_EXE!" -d bin -cp "lib\mysql-connector-java.jar" -encoding UTF-8 src\model\*.java
+    if !ERRORLEVEL! NEQ 0 (
+        echo ❌ Loi bien dich model layer
+        pause
+        exit /b 1
+    )
+)
+
+REM Bien dich root files
+echo - Root files...
+for %%f in (src\*.java) do (
+    if exist "%%f" (
+        "!JAVAC_EXE!" -d bin -cp "lib\mysql-connector-java.jar" -encoding UTF-8 "%%f"
+        if !ERRORLEVEL! NEQ 0 (
+            echo ❌ Loi bien dich file %%f
+            pause
+            exit /b 1
+        )
+    )
+)
+
+REM Bien dich controller layer
+echo - Controller layer...
+if exist "src\controller\*.java" (
+    "!JAVAC_EXE!" -d bin -cp "lib\mysql-connector-java.jar;bin" -encoding UTF-8 src\controller\*.java
+    if !ERRORLEVEL! NEQ 0 (
+        echo ❌ Loi bien dich controller layer
+        pause
+        exit /b 1
+    )
+)
+
+REM Bien dich view layer
+echo - View layer...
+if exist "src\view\*.java" (
+    "!JAVAC_EXE!" -d bin -cp "lib\mysql-connector-java.jar;bin" -encoding UTF-8 src\view\*.java
+    if !ERRORLEVEL! NEQ 0 (
+        echo ❌ Loi bien dich view layer
+        pause
+        exit /b 1
+    )
+)
+
+if exist "bin\view\Main.class" (
+    echo ✅ Bien dich thanh cong!
 ) else (
-    echo    ✅ Thư mục bin/ đã tồn tại
+    echo ❌ Bien dich that bai!
+    exit /b 1
 )
-echo.
+pause
+exit /b 0
 
-REM Kiểm tra MySQL driver
-echo    📋 KIỂM TRA DEPENDENCIES:
-echo    ==========================
-if exist "lib\mysql-connector-java.jar" (
-    echo    ✅ MySQL Driver: CÓ
-) else (
-    echo    ❌ MySQL Driver: THIẾU (lib\mysql-connector-java.jar)
-    echo    💡 Tải từ: https://dev.mysql.com/downloads/connector/j/
-    echo    � Hoặc từ: https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.33/mysql-connector-java-8.0.33.jar
-    echo.
-    pause
-    goto MAIN_MENU
-)
-echo.
-
-REM Biên dịch source code
-echo    📋 BIÊN DỊCH MVC PATTERN:
-echo    ==========================
-echo    🔄 Đang biên dịch cấu trúc MVC...
-
-REM Biên dịch theo thứ tự dependency: Model -> Controller -> View
-echo    📦 Biên dịch Model layer...
-call "%JAVAC_EXE%" -d bin -cp "lib\mysql-connector-java.jar" -encoding UTF-8 src\model\*.java
-
-if !ERRORLEVEL! NEQ 0 (
-    echo    ❌ Lỗi biên dịch Model layer!
-    pause
-    goto MAIN_MENU
-)
-
-echo    🎮 Biên dịch Controller layer...
-call "%JAVAC_EXE%" -d bin -cp "lib\mysql-connector-java.jar;bin" -encoding UTF-8 src\controller\*.java
-
-if !ERRORLEVEL! NEQ 0 (
-    echo    ❌ Lỗi biên dịch Controller layer!
-    pause
-    goto MAIN_MENU
-)
-
-echo    🖼️ Biên dịch View layer...
-call "%JAVAC_EXE%" -d bin -cp "lib\mysql-connector-java.jar;bin" -encoding UTF-8 src\view\*.java
-
-if !ERRORLEVEL! EQU 0 (
-    echo    ✅ Biên dịch MVC Pattern thành công!
-    echo.
-    echo    📄 Cấu trúc MVC đã được tạo trong thư mục bin/
-    echo    📦 Model: model\*.class
-    echo    🎮 Controller: controller\*.class  
-    echo    🖼️ View: view\*.class
-    echo    🚀 Bạn có thể chạy chương trình bằng GUI hoặc Console mode
-) else (
-    echo    ❌ Có lỗi trong quá trình biên dịch View layer!
-    echo    💡 Hãy kiểm tra lại source code trong thư mục src/
-    echo.
-    pause
-    goto MAIN_MENU
-)
-
-echo.
-echo    🎉 HOÀN THÀNH BIÊN DỊCH!
-echo.
-timeout /t 3 >nul
-goto MAIN_MENU
-
-REM ========================================
-REM                 EXIT
-REM ========================================
-:EXIT
+:CLEAN_BUILD
 cls
-echo.
-echo    🏬 ===================================== 🏬
-echo              TỰ ĐỘNG DỌN DẸP VÀ THOÁT
-echo    🏬 ===================================== 🏬
-echo.
-
-echo    🧹 Đang dọn dẹp project trước khi thoát...
-echo    ==========================================
-echo.
-
-REM Dọn dẹp các file đã biên dịch
-echo    🔄 Dọn dẹp MVC compiled files...
-if exist "bin\model\*.class" (
-    del /Q "bin\model\*.class" 2>nul
-    echo    ✅ Đã xóa Model classes
-)
-if exist "bin\controller\*.class" (
-    del /Q "bin\controller\*.class" 2>nul
-    echo    ✅ Đã xóa Controller classes
-)
-if exist "bin\view\*.class" (
-    del /Q "bin\view\*.class" 2>nul
-    echo    ✅ Đã xóa View classes
-)
-if exist "bin\*.class" (
-    del /Q "bin\*.class" 2>nul
-    echo    ✅ Đã xóa các file .class khác
+echo 🧹 Don dep build...
+if exist "bin" (
+    rmdir /s /q "bin" 2>nul
+    echo ✅ Da xoa thu muc bin
+) else (
+    echo ℹ️ Thu muc bin khong ton tai
 )
 
-REM Dọn dẹp các file tạm thời
-echo    🔄 Dọn dẹp file tạm thời...
-if exist "*.tmp" del /Q "*.tmp" 2>nul
-if exist "*.log" del /Q "*.log" 2>nul
-if exist "src\*.class" del /Q "src\*.class" 2>nul
-if exist "database\*.class" del /Q "database\*.class" 2>nul
-echo    ✅ Đã xóa các file tạm thời
+REM Xoa cac file .class du thua neu co
+for /r "src" %%f in (*.class) do (
+    if exist "%%f" (
+        del "%%f" 2>nul
+        echo ✅ Da xoa file class du thua: %%f
+    )
+)
 
-echo.
-echo    🎉 Dọn dẹp hoàn tất!
-echo.
-echo    🏬 ===================================== 🏬
-echo              CẢM ƠN BẠN ĐÃ SỬ DỤNG!
-echo    🏬 ===================================== 🏬
-echo.
-echo    💝 Cảm ơn bạn đã sử dụng chương trình!
-echo    🚀 Chúc bạn làm việc hiệu quả!
-echo    👋 Hẹn gặp lại...
-echo.
-echo    🏬 ===================================== 🏬
-echo.
-timeout /t 3 >nul
-exit
+echo ✅ Don dep hoan tat!
+pause
+exit /b 0
+
+:EXIT_PROGRAM
+cls
+echo 👋 Tam biet!
+echo 🧹 Don dep...
+if exist "bin" (
+    rmdir /s /q "bin" 2>nul
+    echo ✅ Da don dep
+)
+timeout /t 2 >nul
+exit /b 0

@@ -62,7 +62,7 @@ public abstract class HangHoa {
      * @return giá đã bao gồm VAT
      */
     public double getGiaCoVAT() {
-        return donGia * (1 + tinhVAT() / 100.0);
+        return donGia * (1 + tinhVAT());
     }
     
     /**
@@ -70,7 +70,7 @@ public abstract class HangHoa {
      * @return tỷ lệ VAT theo phần trăm
      */
     public double getVATRate() {
-        return tinhVAT();
+        return tinhVAT() * 100.0;
     }
     
     /**
